@@ -81,7 +81,7 @@ for(int tw = 0; tw < target->width; tw++){
         }
         
         Uint32 resultColor = 0xFFFFFFFF;
-        Sint8  highest = -1;
+        Int8  highest = -1;
         for(int s = 0; s < nncount; s++){
             if(nn[s].times > highest){
                 resultColor = nn[s].color;
@@ -100,19 +100,21 @@ void render(RenderItem * queue){
     RenderItem * current = queue;
     while(current){
         //maybe switch differned render commands
-        
-        Uint32 targetW = current->w * renderer.width;
-        Uint32 targetH = current->h * renderer.height;
-        Uint32 offsetX = current->x * renderer.width;
-        Uint32 offsetY = current->y * renderer.height;
+        switch(current->type){
+            case RenderType_Image:{
+                    
+        Uint32 targetW = current->image.w * renderer.width;
+        Uint32 targetH = current->image.h * renderer.height;
+        Uint32 offsetX = current->image.x * renderer.width;
+        Uint32 offsetY = current->image.y * renderer.height;
         
         //scale and save
-        if(current->cached->pixeldata == 0 || targetW != current->cached->width || targetH != current->cached->height){
+        if(current->image.cached->pixeldata == 0 || targetW != current->image.cached->width || targetH != current->image.cached->height){
             //prepare memory
             
             //note many scaling could potentionally create holes, also, in the future, better memory management, maybe linked list mem?
-            current->cached->pixeldata = &PPUSHS(Uint32, targetW*targetH*4);
-            scaleImage(current->original, current->cached, targetW, targetH);
+            current->image.cached->pixeldata = &PPUSHS(Uint32, targetW*targetH*4);
+            scaleImage(current->image.original, current->image.cached, targetW, targetH);
     
         }
         
@@ -122,10 +124,28 @@ void render(RenderItem * queue){
                int buffi = (renderer.height - h - 1)*renderer.width  + w;
                 int srci = (w-offsetX) + (h-offsetY)*targetW;
                 //also, fuck blending for now
-                renderer.drawbuffer[buffi] = current->cached->pixeldata[srci];
+                renderer.drawbuffer[buffi] = current->image.cached->pixeldata[srci];
             }
         }
-        
+       
+            } break; 
+            case RenderType_BlinkEffect:{
+                Uint32 black = 0x00000000;                                
+                ASSERT(current->blink.progress >= 0 && current->blink.progress <= 1);
+                Uint32 Ysize = (renderer.height/2) * current->blink.progress;
+                for(int w = 0; w < renderer.width; w++){
+                    for(int h = 0; h <= Ysize; h++){
+                        int buffi = (renderer.height - h - 1)*renderer.width  + w;         
+                        renderer.drawbuffer[buffi] = black;
+                    }
+                    for(int h = renderer.height-1; h >= renderer.height-Ysize; h--){
+                        int buffi = (renderer.height - h - 1)*renderer.width  + w;         
+                        renderer.drawbuffer[buffi] = black;                        
+                    }
+                }                
+            } break;
+            default: ASSERT(!"Invalid");
+        }
         current = current->next;
     }    
 }

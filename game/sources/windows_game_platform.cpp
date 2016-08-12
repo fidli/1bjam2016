@@ -2,6 +2,11 @@
 #include <windowsx.h>
 #include <Wingdi.h>
 #include <Gdiplus.h> 
+#include <DSound.h>
+#include <mfapi.h>
+#include <mfidl.h>
+#include <Mfreadwrite.h>
+
 
 #define TOTAL_MEM GIGABYTE(1)
 #define TEMP_MEM MEGABYTE(50)
@@ -18,7 +23,7 @@ memory mem;
 
 
 
-
+#include "game_math.cpp"
 #include "gamecode.cpp"
 #include "windows_game_render.cpp"
 
@@ -95,6 +100,20 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
                 EndPaint(window, &paint);
             }
             break;
+            case WM_KEYUP:{
+                if(wParam == VK_SPACE){
+                input.wasDown = input.isDown;
+                input.isDown = false;
+                }
+            }
+            break;
+            case WM_KEYDOWN:{
+                if(wParam == VK_SPACE){                
+                input.wasDown = input.isDown;
+                input.isDown = true;
+                }
+            }
+            break;
 			case WM_CLOSE:
 	        case WM_DESTROY:
 	            {
@@ -153,13 +172,65 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 																	Float64 currentTime = getCurrentTime();
 																	Float64 timeAccumulator = 0.0f;
                             
+                            
+                       
     
+                            int samplesPerSecond = 48000;
+                            int bytesPerSample = sizeof(Int16)*2;
+                            int bufferSize = samplesPerSecond*bytesPerSample*2;
  
-                                
+                            LPDIRECTSOUND8 d8;
+                            ASSERT(DirectSoundCreate8(0, &d8, 0) == DS_OK);
+                            ASSERT(d8->SetCooperativeLevel(window, DSSCL_PRIORITY) == DS_OK);
+                            
+                         
 
+                            DSBUFFERDESC pbuffdesc= {};
+                            pbuffdesc.dwSize = sizeof(DSBUFFERDESC);
+                            pbuffdesc.dwFlags = DSBCAPS_PRIMARYBUFFER;
+                                           
 
+                            LPDIRECTSOUNDBUFFER primarybuffer;
+                            
+                            ASSERT(d8->CreateSoundBuffer(&pbuffdesc, &primarybuffer, 0) == DS_OK);                            
+                            
+                            WAVEFORMATEX wf = {};
+                            wf.wFormatTag = WAVE_FORMAT_PCM;
+                            wf.nChannels = 2;
+                            wf.nSamplesPerSec = samplesPerSecond;
+                            wf.wBitsPerSample = 16;
+                            wf.nBlockAlign = (wf.nChannels*wf.wBitsPerSample) / 8;
+                            wf.nAvgBytesPerSec = wf.nSamplesPerSec*wf.nBlockAlign;
+                            wf.cbSize = 0;
+                            
     
- 
+                            ASSERT(SUCCEEDED(primarybuffer->SetFormat(&wf)));
+                            
+                             DSBUFFERDESC sbuffdesc= {};
+                            sbuffdesc.dwSize = sizeof(DSBUFFERDESC);
+                             sbuffdesc.dwBufferBytes = bufferSize;
+                             sbuffdesc.lpwfxFormat = &wf;
+                                           
+
+                            LPDIRECTSOUNDBUFFER secondarybuffer;
+                            
+                             ASSERT(SUCCEEDED(d8->CreateSoundBuffer(&sbuffdesc, &secondarybuffer, 0)));
+                            
+                             void * region1;
+                             DWORD region1size;
+                             void * region2;
+                             DWORD region2size;
+                             
+                             
+                             DWORD writeCursor;
+                             DWORD playCursor;
+
+                            Uint32 running = 0;
+                             
+                          
+                           
+                             secondarybuffer->Play(0,0,DSBPLAY_LOOPING);
+     
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 																	while (appRunning) {
 																			Float64 newTime = getCurrentTime();
@@ -177,11 +248,76 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 																							DispatchMessage(&msg);
 																			}
                                                                  
+                                          
+                                                                            while(timeAccumulator >= TIME_STEP){
+                                                                                update(TIME_STEP);
+                                                                                timeAccumulator -= TIME_STEP;
+                                                                            }
                                                                             
+                                                                         
                                                                         
                                                                             render(getRenderQueue());
-                                   
-                                                                       
+                                      ASSERT(SUCCEEDED(secondarybuffer->GetCurrentPosition(&playCursor, &writeCursor)));
+                             
+                             DWORD byteToLock = (running*bytesPerSample) % bufferSize;
+                             DWORD bytesToWrite;                             
+
+                                                         
+                                                                            
+                                                         //this is filling also not moving cursor, check that it has moved between frames, then fill                   
+                             if(byteToLock >= playCursor){
+
+                                 bytesToWrite = bufferSize - byteToLock; 
+                                 bytesToWrite += playCursor;
+                             } else{
+                                 bytesToWrite = playCursor - byteToLock;
+                             }
+                             
+
+                            
+                          
+                                                                            
+                                                                            if(SUCCEEDED(secondarybuffer->Lock(byteToLock, bytesToWrite, &region1, &region1size, &region2, &region2size,0))){
+                                
+                            
+                            
+                             
+
+                             int hz = 256;
+                             int period =samplesPerSecond/hz;
+                             
+                             Int16 * lsample = (Int16 *) region1;
+                          
+                             DWORD sampleCount1 = region1size/bytesPerSample; 
+                             DWORD sampleCount2 = region2size/bytesPerSample; 
+                             
+
+                             
+                             for(DWORD index = 0; index < sampleCount1; index++){
+                                 
+                                 Int16 val = ((running / (period/2))%2) ? 1500 : -1500;
+                                 *lsample = val;
+                                     lsample++;
+                                 *lsample = val;
+                                     lsample++;
+                                 running++;
+
+                             }
+                             Int16 * llsample = (Int16 *) region2;
+                             for(DWORD index = 0; index < sampleCount2; index++){
+                                  
+                                 Int16 val = ((running / (period/2))%2) ? 1500: -1500;
+                                 *llsample = val;
+                                     llsample++;
+                                 *llsample = val;
+
+                                 llsample++;
+                                                                  running++; 
+                             }
+                     
+                             
+                             ASSERT(SUCCEEDED(secondarybuffer->Unlock(region1, region1size, region2, region2size)));
+                         }
             
  
                                 InvalidateRect(window, NULL, TRUE);                       
