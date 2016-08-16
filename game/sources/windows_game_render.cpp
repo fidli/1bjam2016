@@ -26,6 +26,13 @@ void loadImage(const WCHAR * file, Image * target){
     delete image;
 }
 
+bool initGraphics(){
+ return Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL) == 0; //Status.OK
+}
+
+void closeGraphics(){
+Gdiplus::GdiplusShutdown(gdiplusToken); 
+}
 
 
 void scaleImage(const Image * source, Image * target, Uint32 targetWidth, Uint32 targetHeight){

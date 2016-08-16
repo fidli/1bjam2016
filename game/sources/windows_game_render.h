@@ -1,6 +1,9 @@
 #ifndef WINDOWS_GAME_RENDER_H
 #define WINDOWS_GAME_RENDER_H
 
+#include <Wingdi.h>
+#include <Gdiplus.h> 
+
 static union ColorConvertor{
                                 Uint32 complex;
                                 struct{
@@ -30,4 +33,7 @@ Uint32 height;
 
 DrawContext renderer;
 
+    Gdiplus::GdiplusStartupInput gdiplusStartupInput; 
+    ULONG_PTR gdiplusToken; 
+                            
 #endif

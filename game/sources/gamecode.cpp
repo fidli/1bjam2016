@@ -1,6 +1,7 @@
 #include "game_structures.h"
 
 void loadImage(const  WCHAR * file, Image * target);
+void loadAudio(const  WCHAR * file);
 
 void setCurrentNode(int node){
     game->currentNode = node;
@@ -11,13 +12,16 @@ void setCurrentNode(int node){
 void initGameWorld(){
        //open map file, parse map, loading range of possible nodes according to gameplay tree
     
-
+    loadAudio(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\first_wakeup.m4a");
+    
                             
     loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_01.JPG", &game->nodes[0].originalImage);
     game->nodes[0].cachedScaledImage.pixeldata = 0;
     game->nodes[0].followCount = 1;
     game->nodes[0].timer = 1.0f;
     game->nodes[0].follow[0] = 1;
+    
+    
     
     loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_02.JPG", &game->nodes[1].originalImage);
     game->nodes[1].cachedScaledImage.pixeldata = 0;
@@ -77,7 +81,9 @@ void update(Float32 dt){
 
 
 
-
+  AudioItem * getAudioQueue(){
+      return NULL;
+  }
 
 RenderItem * getRenderQueue(){
     RenderItem * first = &PUSH(RenderItem);

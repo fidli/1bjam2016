@@ -33,6 +33,16 @@ struct RenderItem{
 };
 
 
+enum AudioType{
+    AudioType_PlayTalk,
+    AudioType_StopTalk,
+};
+
+struct AudioItem{
+    AudioType type;
+    AudioItem * next;
+};
+
 struct StoryNode{
     Image originalImage;
     Image cachedScaledImage;
