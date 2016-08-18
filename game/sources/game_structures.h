@@ -10,6 +10,10 @@ struct Image{
     
 };
 
+struct Audio{
+    Int32 * samplesdata; //16 bit per channel, 2 channels, 44100 per second
+    Uint16 samplesAmount; 
+};
 
 enum RenderType{
 RenderType_Image,
@@ -46,6 +50,7 @@ struct AudioItem{
 struct StoryNode{
     Image originalImage;
     Image cachedScaledImage;
+    Audio talk;
     Uint8 followCount;
     Float32 timer;
     Uint16 follow[4];

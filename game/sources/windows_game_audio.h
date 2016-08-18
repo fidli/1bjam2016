@@ -7,7 +7,7 @@
 #include <Objbase.h>
 #include <Mfreadwrite.h>
 
-struct audio{
+struct audioMixer{
                             int samplesPerSecond;
                             int bytesPerSample;
                             int bufferSize;
@@ -15,6 +15,9 @@ struct audio{
     LPDIRECTSOUNDBUFFER talkbuffer;
 };
 
-audio mixer;
+audioMixer mixer;
+
+
+
 
 #endif

@@ -1,24 +1,109 @@
 #include "windows_game_audio.h"
 
+//intended only for loading audio by mff bollocks
+static struct buffersample{
+    buffersample * next;
+    Byte * data;
+    DWORD size;
+};
 
-void loadAudio(const WCHAR * path){
+void loadAudio(const WCHAR * path, Audio * target){
     IMFSourceReader * reader;
     HRESULT r =  MFCreateSourceReaderFromURL(path, NULL, &reader);
     ASSERT(r == S_OK);
     
-    IMFMediaType * mediaType;
+    //deselect all streams
+    ASSERT(SUCCEEDED(reader->SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS, FALSE)));
+    //select first audio stream
+    ASSERT(SUCCEEDED(reader->SetStreamSelection(MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)));
     
-    ASSERT(SUCCEEDED(reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, &mediaType)));
+    //set the target type, #noidea
+    IMFMediaType * targetType;
+    ASSERT(SUCCEEDED(MFCreateMediaType(&targetType)));
+    ASSERT(SUCCEEDED(targetType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio)));
+    ASSERT(SUCCEEDED(targetType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM)));
     
-    mediaType->Release();
+    //convert
+    reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, targetType);
     
+    //obtain exact variables
+    reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, &targetType);
+    
+    WAVEFORMATEX * sourceFormat;
+    UINT32 formatSize = 0;
+    ASSERT(SUCCEEDED(MFCreateWaveFormatExFromMFMediaType(targetType, &sourceFormat, &formatSize)));
+    
+    ASSERT(sourceFormat->nChannels == 2);
+    ASSERT(sourceFormat->nSamplesPerSec == mixer.samplesPerSecond);
+    ASSERT(sourceFormat->wBitsPerSample == 16);
+    
+    //copy data into own memory
+    //(is roughly 10 MB/sec)
+    DWORD outflags;
+    IMFSample * sample;
+    IMFMediaBuffer *buffer;
+    buffersample * queue = &PUSH(buffersample);
+    buffersample * current = queue;
+    DWORD totalSize = 0;
+     while(true){
+         //read samples till you die,
+         ASSERT(SUCCEEDED(reader->ReadSample(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &outflags, NULL, &sample)));
+         
+         if((outflags & MF_SOURCE_READERF_ENDOFSTREAM) || sample == NULL){
+             current->next = NULL;
+             break;
+         }
+         
+         ASSERT(SUCCEEDED(sample->ConvertToContiguousBuffer(&buffer)));
+         
+        
+         Byte * data;
+         DWORD currentSize = 0;
+         ASSERT(SUCCEEDED(buffer->Lock(&data, NULL, &currentSize)));
+         
+         totalSize += currentSize;
+         current->size = currentSize;
+         
+         current->data = &PUSHS(Byte, currentSize);
+         
+         for(int i = 0; i < currentSize; i++){
+             current->data[i] = data[i];
+         }
+         
+         ASSERT(SUCCEEDED(buffer->Unlock()));
+         
+             current->next = &PUSH(buffersample);
+             current = current->next;
+         buffer->Release();
+         sample->Release();
+    }
+    
+    //copy linked list audio chunks into one piece of memory
+    target->samplesAmount = totalSize / 4; //2x 16 bits
+    target->samplesdata = &PPUSHS(Int32, target->samplesAmount);
+    
+    Byte * samplesbuffer = (Byte *) target->samplesdata;
+    
+    current = queue;
+    
+    while(current != NULL){
+        for(int i = 0; i < current->size; i++){
+            *samplesbuffer = current->data[i];
+            samplesbuffer++;
+        }
+        current = current->next;
+    }
+    
+    
+    CoTaskMemFree(sourceFormat);
+    targetType->Release();
     reader->Release();
        
 }
 
 bool initAudio(){
 
-    mixer. samplesPerSecond = 48000;
+    mixer. samplesPerSecond = 44100;
     mixer. bytesPerSample = sizeof(Int16)*2;
     mixer. bufferSize = mixer.samplesPerSecond*mixer.bytesPerSample*2;
     

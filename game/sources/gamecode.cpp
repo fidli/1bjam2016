@@ -1,7 +1,7 @@
 #include "game_structures.h"
 
 void loadImage(const  WCHAR * file, Image * target);
-void loadAudio(const  WCHAR * file);
+void loadAudio(const  WCHAR * file, Audio * target);
 
 void setCurrentNode(int node){
     game->currentNode = node;
@@ -12,7 +12,7 @@ void setCurrentNode(int node){
 void initGameWorld(){
        //open map file, parse map, loading range of possible nodes according to gameplay tree
     
-    loadAudio(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\first_wakeup.m4a");
+    loadAudio(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\first_wakeup.m4a", &game->nodes[0].talk);
     
                             
     loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_01.JPG", &game->nodes[0].originalImage);
