@@ -6,7 +6,9 @@ void loadAudio(const  WCHAR * file, Audio * target);
 void setCurrentNode(int node){
     game->currentNode = node;
     game->requiresBlink = game->nodes[node].followCount > 1;
-    game->timers.node = game->nodes[node].timer;
+    game->isChoosing = false;
+    game->nodeChanged = true;
+   
 }
 
 void initGameWorld(){
@@ -22,7 +24,8 @@ void initGameWorld(){
     game->nodes[0].follow[0] = 1;
     
     
-    
+
+    loadAudio(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\remember_we_were_drinking.m4a", &game->nodes[1].talk);
     loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_02.JPG", &game->nodes[1].originalImage);
     game->nodes[1].cachedScaledImage.pixeldata = 0;
     game->nodes[1].followCount = 1;
@@ -38,20 +41,24 @@ void initGameWorld(){
     game->nodes[3].timer = 1.0f;
     game->nodes[3].cachedScaledImage.pixeldata = 0;
     game->nodes[3].followCount = 0;
-
-        setCurrentNode(0);
+ 
+    setCurrentNode(0);
  
 }
 
 void update(Float32 dt){
+    if(game->nodeChanged){
+       game->nodeChanged = false;
+    }
     if(game->timers.blink <= 0.0f){
         game->isBlinking = false;
     }
-    if(game->timers.node <= 0.0f){
+    if(game->nodes[game->currentNode].talk.finished){
     
     Uint8 choice = 0;
-    
+
     if(game->requiresBlink){
+        game->isChoosing = true;
     //gief choice
     }else{
         if(game->nodes[game->currentNode].followCount > 0)
@@ -63,7 +70,7 @@ void update(Float32 dt){
       }
     }
     
-    game->timers.node -= dt;
+   
     
     if(input.isDown && !input.wasDown && !game->isBlinking){
         game->isBlinking = true;
@@ -82,7 +89,21 @@ void update(Float32 dt){
 
 
   AudioItem * getAudioQueue(){
-      return NULL;
+      AudioItem * queue = NULL;
+if(game->nodeChanged){
+          queue = &PUSH(AudioItem);
+          queue->next = NULL;
+          queue->type = AudioType_PlayTalk;
+          queue->target = &game->nodes[game->currentNode].talk;
+          
+      }
+      if(game->isChoosing){
+          queue = &PUSH(AudioItem);
+          queue->next = NULL;
+          queue->type = AudioType_StopTalk;
+
+      }
+      return queue;
   }
 
 RenderItem * getRenderQueue(){

@@ -11,8 +11,14 @@ struct audioMixer{
                             int samplesPerSecond;
                             int bytesPerSample;
                             int bufferSize;
-    
+                           int bytesPlayed;
     LPDIRECTSOUNDBUFFER talkbuffer;
+    DWORD playCursor;
+    DWORD writeCursor;
+    bool played;
+    int bytesLoaded;
+    Audio * target;
+    bool talkplaying;
 };
 
 audioMixer mixer;

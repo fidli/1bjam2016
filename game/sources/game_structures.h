@@ -11,8 +11,9 @@ struct Image{
 };
 
 struct Audio{
-    Int32 * samplesdata; //16 bit per channel, 2 channels, 44100 per second
-    Uint16 samplesAmount; 
+    Byte * samplesdata; //16 bit per channel, 2 channels, 44100 per second
+    Uint32 size;
+    bool finished;
 };
 
 enum RenderType{
@@ -45,6 +46,7 @@ enum AudioType{
 struct AudioItem{
     AudioType type;
     AudioItem * next;
+    Audio * target;
 };
 
 struct StoryNode{
@@ -61,12 +63,14 @@ struct StoryNode{
 struct World{
     Uint16 currentNode;
     bool requiresBlink;
+    bool nodeChanged;
     
     StoryNode nodes[2000];
     bool isBlinking;
+    bool isChoosing;
     struct {
         Float32 blink;
-        Float32 node;
+       
     }timers;
 };
 

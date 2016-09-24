@@ -5,7 +5,7 @@
 
 
 #define TOTAL_MEM GIGABYTE(1)
-#define TEMP_MEM MEGABYTE(50)
+#define TEMP_MEM MEGABYTE(250)
 #define STACK_MEM MEGABYTE(250)
 
 #include "common.h"
@@ -177,6 +177,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 																			Float64 frameTime = newTime - currentTime;
 																			currentTime = newTime;
 																			timeAccumulator += frameTime;
+                                                                      
 
                                                                         mem.tempOffset = 0;//reseting temp memory
                                                                         
@@ -191,6 +192,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
                                           
                                                                             while(timeAccumulator >= TIME_STEP){
                                                                                 update(TIME_STEP);
+                                                                                
                                                                                 timeAccumulator -= TIME_STEP;
                                                                             }
                                                                             
@@ -199,17 +201,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
                                                                             render(getRenderQueue());
                                                                             mix(getAudioQueue());
                                                                             
-                                InvalidateRect(window, NULL, TRUE);                       
+                                                          
+                                                                            
+                                                                            
+                                                                                   
+                                                                            InvalidateRect(window, NULL, TRUE);                       
                                                                         }
 
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------
                                                                         closeAudio();
+                                                                    }else{
+                                                                    alertError("Failed to init sound", window);
                                                                     }
                                                                         closeGraphics();
                                                                     }else{
-                                     								alertError("Failed to init graphics gdi library", window);
+                                     								alertError("Failed to init graphics", window);
                                                                     }
                                          
 							DestroyWindow(window);

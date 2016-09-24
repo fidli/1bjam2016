@@ -44,7 +44,7 @@ void loadAudio(const WCHAR * path, Audio * target){
     IMFMediaBuffer *buffer;
     buffersample * queue = &PUSH(buffersample);
     buffersample * current = queue;
-    DWORD totalSize = 0;
+    Uint32 totalSize = 0;
      while(true){
          //read samples till you die,
          ASSERT(SUCCEEDED(reader->ReadSample(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &outflags, NULL, &sample)));
@@ -79,10 +79,10 @@ void loadAudio(const WCHAR * path, Audio * target){
     }
     
     //copy linked list audio chunks into one piece of memory
-    target->samplesAmount = totalSize / 4; //2x 16 bits
-    target->samplesdata = &PPUSHS(Int32, target->samplesAmount);
+    target->size = totalSize;
+    target->samplesdata = &PPUSHS(Byte, target->size);
     
-    Byte * samplesbuffer = (Byte *) target->samplesdata;
+    Byte * samplesbuffer = target->samplesdata;
     
     current = queue;
     
@@ -98,6 +98,8 @@ void loadAudio(const WCHAR * path, Audio * target){
     CoTaskMemFree(sourceFormat);
     targetType->Release();
     reader->Release();
+    
+    target->finished = false;
        
 }
 
@@ -153,6 +155,7 @@ bool initAudio(){
                                  return false;
                              }
                              
+                             
                          }
                      }
                      
@@ -177,14 +180,152 @@ void closeAudio(){
 }
 
 
+static void updatePlayCursorPosition(){
+    DWORD writeCursor;
+    DWORD playCursor;
+    mixer.played = false;
+    if(SUCCEEDED(mixer.talkbuffer->GetCurrentPosition(&playCursor, &writeCursor))){
+        if(mixer.playCursor != playCursor){
+            //something was played
+            
+            if(mixer.bytesLoaded != 0){
+                //talk audio was played
+                if(playCursor > mixer.playCursor){    
+                    mixer.bytesPlayed += playCursor - mixer.playCursor;
+                }else{
+                    mixer.bytesPlayed += mixer.bufferSize -  mixer.playCursor + playCursor;
+                }
+            }
+            
+            mixer.playCursor = playCursor;
+            mixer.writeCursor = writeCursor;
+            mixer.played = true;
+        }
+    }
+            
+}
+
+static void loadBuffer(){
+    if(mixer.bytesLoaded < mixer.target->size){
+        DWORD writeCursor = mixer.writeCursor;
+        DWORD playCursor = mixer.playCursor;
+        if(mixer.played){
+                             
+                    DWORD byteToLock = writeCursor;
+                DWORD bytesToWrite;
+                DWORD bytesGap;
+                
+                if(byteToLock >= playCursor){
+                    
+                    bytesToWrite = mixer.bufferSize - byteToLock; 
+                    bytesToWrite += playCursor;
+                    
+                    bytesGap = byteToLock - playCursor;
+                    
+                } else{
+                    bytesToWrite = playCursor - byteToLock;
+                    bytesGap = byteToLock + (mixer.bufferSize - playCursor);
+                }
+                
+                
+                
+                
+                
+                //not preloaded enough
+                DWORD bytesUnplayed = mixer.bytesLoaded - mixer.bytesPlayed;
+                if(mixer.bytesLoaded != 0){
+                    bytesUnplayed -= bytesGap;
+                }
+                
+                if(bytesToWrite > bytesUnplayed){
+                
+                    byteToLock = (playCursor + bytesUnplayed) % mixer.bufferSize;
+                    bytesToWrite -= bytesUnplayed + bytesGap;   
+                    
+                
+                
+                //lock and load
+                
+                void * region1;
+                DWORD region1size;
+                void * region2;
+                DWORD region2size;
+                
+                if(SUCCEEDED(mixer.talkbuffer->Lock(byteToLock, bytesToWrite, &region1, &region1size, &region2, &region2size,0))){
+
+                             
+                    for(DWORD index = 0; index < region1size && index + mixer.bytesLoaded < mixer.target->size; index++){
+                        
+                        if(index + mixer.bytesLoaded < mixer.target->size){
+                                 
+                        *((Byte *) region1 + index) = mixer.target->samplesdata[index+mixer.bytesLoaded];
+                        
+                        }
+                        else{
+                       
+                            *((Byte *) region1 + index) = 0;
+                        }
+                       
+
+                             }
+                             
+                             mixer.bytesLoaded += region1size;
+                             
+                             for(DWORD index = 0; index < region2size && index + mixer.bytesLoaded < mixer.target->size; index++){
+
+                             if(index + mixer.bytesLoaded < mixer.target->size){
+                                 
+                                 *((Byte *) region2 + index) = mixer.target->samplesdata[index+mixer.bytesLoaded];
+                             }
+                             else{
+                                 
+                                 *((Byte *) region2 + index) = 0;
+                             }
+                                 
+                                 
+                             }
+                             
+                             
+                             
+                             
+
+                             mixer.bytesLoaded += region2size;
+                             
+                    if(!SUCCEEDED(mixer.talkbuffer->Unlock(region1, region1size, region2, region2size))){
+                        alertError("Failed to unlock buffer");
+                    }
+                    
+                }
+            }
+                
+                
+            }
+        
+    }
+                             
+                             
+                             
+                            
+                        
+        
+            
+}
+
+
 void mix(AudioItem * queue){
     AudioItem * current = queue;
     while(current != NULL){
         switch(current->type){
             case AudioType_PlayTalk:
+            mixer.talkplaying = true;
             mixer.talkbuffer->Play(0,0,DSBPLAY_LOOPING);
+            mixer.bytesLoaded = 0;
+            mixer.bytesPlayed = 0;
+            mixer.target = current->target;
+            mixer.target->finished = false;
             break;
             case AudioType_StopTalk:
+            mixer.talkplaying = false;
             mixer.talkbuffer->Stop();
             break;
             default:
@@ -193,79 +334,16 @@ void mix(AudioItem * queue){
         }
         current = current->next;
     }
+    if(mixer.talkplaying){
+        updatePlayCursorPosition();
+        loadBuffer();
+        if(mixer.bytesPlayed >= mixer.target->size){
+            mixer.target->finished = true;
+        }
+    }
+    
 }
-/*
-       void * region1;
-                             DWORD region1size;
-                             void * region2;
-                             DWORD region2size;
-                             
-                             
-                             DWORD writeCursor;
-                             DWORD playCursor;
 
-                            Uint32 running = 0;
 
-                                      ASSERT(SUCCEEDED(mixer.talkbuffer->GetCurrentPosition(&playCursor, &writeCursor)));
-                             
-                             DWORD byteToLock = (running*mixer.bytesPerSample) % mixer.bufferSize;
-                             DWORD bytesToWrite;                             
 
-                                                         
-                                                                            
-                                                         //this is filling also not moving cursor, check that it has moved between frames, then fill                   
-                             if(byteToLock >= playCursor){
 
-                                 bytesToWrite = mixer.bufferSize - byteToLock; 
-                                 bytesToWrite += playCursor;
-                             } else{
-                                 bytesToWrite = playCursor - byteToLock;
-                             }
-                             
-
-                            
-                          
-                                                                            
-                                                                            if(SUCCEEDED(mixer.talkbuffer->Lock(byteToLock, bytesToWrite, &region1, &region1size, &region2, &region2size,0))){
-                                
-                            
-                            
-                             
-
-                             int hz = 256;
-                             int period = mixer.samplesPerSecond/hz;
-                             
-                             Int16 * lsample = (Int16 *) region1;
-                          
-                             DWORD sampleCount1 = region1size/mixer.bytesPerSample; 
-                             DWORD sampleCount2 = region2size/mixer.bytesPerSample; 
-                             
-
-                             
-                             for(DWORD index = 0; index < sampleCount1; index++){
-                                 
-                                 Int16 val = ((running / (period/2))%2) ? 1500 : -1500;
-                                 *lsample = val;
-                                     lsample++;
-                                 *lsample = val;
-                                     lsample++;
-                                 running++;
-
-                             }
-                             Int16 * llsample = (Int16 *) region2;
-                             for(DWORD index = 0; index < sampleCount2; index++){
-                                  
-                                 Int16 val = ((running / (period/2))%2) ? 1500: -1500;
-                                 *llsample = val;
-                                     llsample++;
-                                 *llsample = val;
-
-                                 llsample++;
-                                                                  running++; 
-                             }
-                     
-                             
-                             ASSERT(SUCCEEDED(mixer.talkbuffer->Unlock(region1, region1size, region2, region2size)));
-                         }
-            
- */
