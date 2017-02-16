@@ -3,65 +3,35 @@
 
 #define TIME_STEP 0.02f
 
-struct Image{
-    Uint32 width;
-    Uint32 height;
-    Uint32 * pixeldata;
-    
+struct Font{
+    Image source;
+    uint32 gridWidth;
+    uint32 gridHeight;
 };
 
-struct Audio{
-    Byte * samplesdata; //16 bit per channel, 2 channels, 44100 per second
-    Uint32 size;
-    bool finished;
+struct Dialog{
+    struct {
+        char words[10][30];
+        char end[6];
+        uint8 wordsCount;
+    } sentence[10];
+    uint8 sentencesCount;
 };
 
-enum RenderType{
-RenderType_Image,
-    RenderType_BlinkEffect
-};
-
-struct RenderItem{
-    RenderType type;
-    RenderItem * next;
-    union{
-        struct {
-    Image * original;
-    Image * cached;
-    Float32 x, y;
-    Float32 w, h;
-        } image;
-        struct {
-            Float32 progress;
-        } blink;
-    };
-};
-
-
-enum AudioType{
-    AudioType_PlayTalk,
-    AudioType_StopTalk,
-};
-
-struct AudioItem{
-    AudioType type;
-    AudioItem * next;
-    Audio * target;
-};
 
 struct StoryNode{
     Image originalImage;
     Image cachedScaledImage;
     Audio talk;
-    Uint8 followCount;
-    Float32 timer;
-    Uint16 follow[4];
+    uint8 followCount;
+    Dialog dialog;
+    uint16 follow[4];
 };
 
 #define BLINK_TIME 0.5f
 
 struct World{
-    Uint16 currentNode;
+    uint16 currentNode;
     bool requiresBlink;
     bool nodeChanged;
     
@@ -69,8 +39,8 @@ struct World{
     bool isBlinking;
     bool isChoosing;
     struct {
-        Float32 blink;
-       
+        float32 blink;
+        
     }timers;
 };
 

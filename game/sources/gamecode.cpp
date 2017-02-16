@@ -1,24 +1,83 @@
-#include "util_time.h"
-#include "util_gui.h"
-
-void run(){
-    bool initTimeResult = initTime();
-    ASSERT(initTimeResult);
-    
-    WindowParameters parameters;
-    strcpy(parameters.name, "Paralyzed");
-    Window mainWindow;
-    bool createWindowResult = createWindow(&parameters, &mainWindow);
-    ASSERT(createWindowResult);
-    
-    ASSERT(showWindow(&mainWindow));
-    
-}
-/*
 #include "game_structures.h"
 
-void loadImage(const  WCHAR * file, Image * target);
-void loadAudio(const  WCHAR * file, Audio * target);
+
+void parseDialog(const char * text, Dialog * target){
+    int currentSentence = 0;
+    int currentWord = 0;
+    
+    int textLength = strlen(text);
+    
+    int tempOffset = 0;
+    
+    for(int textOffset = 0; tempOffset < textLength; tempOffset++){
+        
+        if(!strcmp(text + tempOffset, "...")){
+            target->sentence[currentSentence].wordsCount = currentWord + 1;
+            
+            strcpy(target->sentence[currentSentence].end, "...");
+            memcpy(target->sentence[currentSentence].words[currentWord], text + textOffset, tempOffset - textOffset);
+            
+            textOffset = tempOffset+2;
+            currentWord = 0;
+            currentSentence++;
+        }else if(!strcmp(text + tempOffset, "?!")){
+            target->sentence[currentSentence].wordsCount = currentWord + 1;
+            
+            strcpy(target->sentence[currentSentence].end, "?!");
+            memcpy(target->sentence[currentSentence].words[currentWord], text + textOffset, tempOffset - textOffset);
+            
+            textOffset = tempOffset+2;
+            currentWord = 0;
+            currentSentence++;
+        }else if(!strcmp(text + tempOffset, "?")){
+            target->sentence[currentSentence].wordsCount = currentWord + 1;
+            
+            strcpy(target->sentence[currentSentence].end, "?!");
+            memcpy(target->sentence[currentSentence].words[currentWord], text + textOffset, tempOffset - textOffset);
+            
+            textOffset = tempOffset+2;
+            currentWord = 0;
+            currentSentence++;
+        }else if(!strcmp(text + tempOffset, "!")){
+            target->sentence[currentSentence].wordsCount = currentWord + 1;
+            
+            strcpy(target->sentence[currentSentence].end, "!");
+            memcpy(target->sentence[currentSentence].words[currentWord], text + textOffset, tempOffset - textOffset);
+            
+            textOffset = tempOffset+2;
+            currentWord = 0;
+            currentSentence++;
+        }else if(!strcmp(text + tempOffset, ".")){
+            target->sentence[currentSentence].wordsCount = currentWord + 1;
+            
+            strcpy(target->sentence[currentSentence].end, ".");
+            memcpy(target->sentence[currentSentence].words[currentWord], text + textOffset, tempOffset - textOffset);
+            
+            textOffset = tempOffset+2;
+            currentWord = 0;
+            currentSentence++;
+        }else if(!strcmp(text + tempOffset, ",")){
+            target->sentence[currentSentence].wordsCount = currentWord + 1;
+            
+            strcpy(target->sentence[currentSentence].end, ",");
+            
+            textOffset = tempOffset+2;
+            currentWord = 0;
+            currentSentence++;
+        }else if(!strcmp(text + tempOffset, " ")){
+            memcpy(target->sentence[currentSentence].words[currentWord], text + textOffset, tempOffset - textOffset);
+            
+            textOffset = tempOffset+1;
+            currentWord++;
+            
+        }
+        
+        
+    }
+    
+    target->sentencesCount = currentSentence + 1;
+}
+
 
 void setCurrentNode(int node){
     game->currentNode = node;
@@ -31,31 +90,36 @@ void setCurrentNode(int node){
 void initGameWorld(){
     //open map file, parse map, loading range of possible nodes according to gameplay tree
     
-    loadAudio(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\first_wakeup.m4a", &game->nodes[0].talk);
+    loadAudio(L"D:\\Git\\1bjam2016\\game\\build\\images\\first_wakeup.m4a", &game->nodes[0].talk);
+    FLUSH;
     
-    
-    loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_01.JPG", &game->nodes[0].originalImage);
+    loadImage(L"D:\\Git\\1bjam2016\\game\\build\\images\\01_01.JPG", &game->nodes[0].originalImage);
+    FLUSH;
     game->nodes[0].cachedScaledImage.pixeldata = 0;
     game->nodes[0].followCount = 1;
-    game->nodes[0].timer = 1.0f;
+    parseDialog("Are you fucking kidding me? This is some horseshit! Linebreak you shit. Fucker.", &game->nodes[0].dialog);
+    FLUSH;
     game->nodes[0].follow[0] = 1;
     
     
     
-    loadAudio(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\remember_we_were_drinking.m4a", &game->nodes[1].talk);
-    loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_02.JPG", &game->nodes[1].originalImage);
+    loadAudio(L"D:\\Git\\1bjam2016\\game\\build\\images\\remember_we_were_drinking.m4a", &game->nodes[1].talk);
+    FLUSH;
+    loadImage(L"D:\\Git\\1bjam2016\\game\\build\\images\\01_02.JPG",
+              &game->nodes[1].originalImage);
+    FLUSH;
     game->nodes[1].cachedScaledImage.pixeldata = 0;
     game->nodes[1].followCount = 1;
-    game->nodes[1].timer = 1.0f;
+    
     game->nodes[1].follow[0] = 2;
     
     game->nodes[2] = game->nodes[0];
     game->nodes[2].followCount = 1;
-    game->nodes[2].timer = 1.0f;
+    
     game->nodes[2].follow[0] = 3;
     
-    loadImage(L"D:\\Git\\1bjam2016\\game\\bin\\x64\\images\\01_03.JPG", &game->nodes[3].originalImage);
-    game->nodes[3].timer = 1.0f;
+    loadImage(L"D:\\Git\\1bjam2016\\game\\build\\images\\01_03.JPG", &game->nodes[3].originalImage);
+    FLUSH;
     game->nodes[3].cachedScaledImage.pixeldata = 0;
     game->nodes[3].followCount = 0;
     
@@ -63,7 +127,7 @@ void initGameWorld(){
     
 }
 
-void update(Float32 dt){
+void update(float32 dt){
     if(game->nodeChanged){
         game->nodeChanged = false;
     }
@@ -71,8 +135,8 @@ void update(Float32 dt){
         game->isBlinking = false;
     }
     if(game->nodes[game->currentNode].talk.finished){
-    
-        Uint8 choice = 0;
+        
+        uint8 choice = 0;
         
         if(game->requiresBlink){
             game->isChoosing = true;
@@ -107,6 +171,7 @@ void update(Float32 dt){
 
 AudioItem * getAudioQueue(){
     AudioItem * queue = NULL;
+    
     if(game->nodeChanged){
         queue = &PUSH(AudioItem);
         queue->next = NULL;
@@ -124,23 +189,38 @@ AudioItem * getAudioQueue(){
 }
 
 RenderItem * getRenderQueue(){
+    RenderItem * target = 0;
+    
     RenderItem * first = &PUSH(RenderItem);
+    
+    target = first;
     
     first->type = RenderType_Image;
     first->image.original = &game->nodes[game->currentNode].originalImage;
     first->image.cached = &game->nodes[game->currentNode].cachedScaledImage;
     first->image.x = first->image.y = 0.0f;
     first->image.w = first->image.h = 1.0f;
-    first->next = 0;
+    
+    RenderItem * subtitle = &PUSH(RenderItem);
+    subtitle->type = RenderType_Text;
+    
+    // subtitle->text.text = game->nodes[game->currentNode].talktext;
+    
+    
+    target->next = subtitle;
+    target = subtitle;
+    
+    target->next = 0;
     
     if(game->isBlinking){
-        RenderItem * blink = first->next = &PUSH(RenderItem);
+        RenderItem * blink = target->next = &PUSH(RenderItem);
         blink->type = RenderType_BlinkEffect;
         blink->blink.progress = sin(((BLINK_TIME - game->timers.blink)/BLINK_TIME)*PI);
-        blink->next = 0;
+        target = blink;
+        target->next = 0;
     }
     
     
     
     return first;
-}*/
+}

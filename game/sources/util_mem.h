@@ -18,7 +18,7 @@ struct memory{
 
 #define TEMP_MEM_STACK_SIZE 4096
 #define TEMP2_MEM_STACK_SIZE 32
-#define EFFECTIVE_TEMP_MEM_SIZE (TEMP_MEM - TEMP2_MEM_STACK_SIZE * sizeof(mem.temp2Offsets)  - TEMP_MEM_STACK_SIZE * sizeof(mem.tempOffsets))
+#define EFFECTIVE_TEMP_MEM_SIZE (TEMP_MEM - TEMP2_MEM_STACK_SIZE * sizeof(*mem.temp2Offsets)  - TEMP_MEM_STACK_SIZE * sizeof(*mem.tempOffsets))
 
 memory mem;
 

@@ -31,7 +31,7 @@ char * strcpy(char * target, const char * source){
 }
 
 uint32 strlen(const char * source){
-    uint64 length = 0;
+    uint32 length = 0;
     while(source[length] != '\0'){
         length++;
     }

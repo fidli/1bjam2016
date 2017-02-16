@@ -1,5 +1,6 @@
-#ifndef WINDOWS_GAME_AUDIO_H
-#define WINDOWS_GAME_AUDIO_H
+#ifndef WINDOWS_AUDIO_H
+#define WINDOWS_AUDIO_H
+
 
 #include <DSound.h>
 #include <Mfidl.h>
@@ -7,11 +8,13 @@
 #include <Objbase.h>
 #include <Mfreadwrite.h>
 
+#include "util_audio.h"
+
 struct audioMixer{
-                            int samplesPerSecond;
-                            int bytesPerSample;
-                            int bufferSize;
-                           int bytesPlayed;
+    int samplesPerSecond;
+    int bytesPerSample;
+    int bufferSize;
+    int bytesPlayed;
     LPDIRECTSOUNDBUFFER talkbuffer;
     DWORD playCursor;
     DWORD writeCursor;
@@ -23,6 +26,17 @@ struct audioMixer{
 
 audioMixer mixer;
 
+
+enum AudioType{
+    AudioType_PlayTalk,
+    AudioType_StopTalk,
+};
+
+struct AudioItem{
+    AudioType type;
+    AudioItem * next;
+    Audio * target;
+};
 
 
 

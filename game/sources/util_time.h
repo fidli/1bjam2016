@@ -28,7 +28,7 @@ bool isLocalTimeValid(const LocalTime * time){
 
 bool initTime();
 
-float64 getProcessCurrentTime();
+float32 getProcessCurrentTime();
 
 
 LocalTime getLocalTime();
